@@ -543,6 +543,11 @@ function render(rows, cfg) {
     const maxCount = sorted.length ? sorted[0][1] : 1;
     const winner = (cfg.winners || {})[cat];
 
+    // If nobody picked the actual winner, add it with 0 votes
+    if (winner && !sorted.some(([ch]) => ch.toLowerCase() === winner.toLowerCase())) {
+      sorted.push([winner, 0]);
+    }
+
     html += `<div class="cat-card" style="animation-delay:${ci * 0.025}s">`;
     html += `<div class="cat-name">${esc(cat)}</div>`;
 
