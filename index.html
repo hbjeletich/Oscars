@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Oscar Predictions</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <div class="hero">
+    <div class="trophy">🏆</div>
+    <h1>Oscar Predictions</h1>
+    <div class="year-tabs" id="year-tabs"></div>
+    <div class="ceremony-label" id="ceremony-label"></div>
+    <div id="live-badge-wrap" style="text-align:center"></div>
+  </div>
+
+  <div class="container">
+    <div id="config-banner" class="config-banner" style="display:none">
+      <strong>Setup for live updating:</strong> Publish your Google Sheet as CSV
+      (File → Share → Publish to web → CSV) and set <code>sheetUrl</code> in app.js.
+    </div>
+    <div id="content">
+      <div class="status-msg"><div class="spinner"></div><br>Loading predictions…</div>
+    </div>
+    <div class="refresh-info" id="refresh-info"></div>
+  </div>
+
+  <script src="sketch.js"></script>
+</body>
+</html>

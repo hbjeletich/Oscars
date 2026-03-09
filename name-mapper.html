@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Oscar Name Mapper</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0B0A0F;
+    --bg-card: #14131A;
+    --gold: #C9A84C;
+    --gold-light: #E8D48B;
+    --text: #E8E6F0;
+    --text-dim: #8A8694;
+    --text-faint: #5A5666;
+    --border: rgba(201,168,76,0.15);
+    --green: #4CAF6A;
+    --red: #E05555;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; padding: 2rem; min-height: 100vh; }
+
+  h1 { font-size: 1.4rem; font-weight: 600; margin-bottom: 0.25rem; }
+  .desc { color: var(--text-dim); font-size: 0.85rem; margin-bottom: 2rem; line-height: 1.5; max-width: 640px; }
+
+  .layout { display: flex; gap: 2rem; align-items: flex-start; flex-wrap: wrap; }
+  .panel { flex: 1; min-width: 300px; }
+  .panel-title { font-weight: 600; font-size: 0.9rem; margin-bottom: 0.75rem; color: var(--text-dim); letter-spacing: 0.03em; }
+
+  /* ── Ungrouped names ── */
+  .ungrouped {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    padding: 1rem; background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 12px; min-height: 60px;
+  }
+
+  .name-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 12px; border-radius: 100px; font-size: 0.82rem;
+    cursor: grab; user-select: none; transition: all 0.15s;
+    border: 1px solid var(--border); background: rgba(255,255,255,0.03);
+  }
+  .name-chip:active { cursor: grabbing; }
+  .name-chip:hover { border-color: rgba(201,168,76,0.4); background: rgba(201,168,76,0.06); }
+  .name-chip .year-dots {
+    display: flex; gap: 2px;
+  }
+  .name-chip .ydot {
+    width: 6px; height: 6px; border-radius: 50%; opacity: 0.25;
+  }
+  .name-chip .ydot.active { opacity: 1; }
+  .ydot-2023 { background: #E05555; }
+  .ydot-2024 { background: #5599E0; }
+  .ydot-2025 { background: #4CAF6A; }
+
+  .name-chip.dragging { opacity: 0.4; }
+
+  /* ── Groups ── */
+  .groups-area { display: flex; flex-direction: column; gap: 10px; }
+
+  .group-card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 0.75rem 1rem; min-height: 50px;
+    transition: all 0.15s;
+  }
+  .group-card.drag-over { border-color: var(--gold); background: rgba(201,168,76,0.04); }
+
+  .group-header {
+    display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;
+  }
+  .group-display-name {
+    font-family: 'DM Mono', monospace; font-size: 0.82rem; font-weight: 500;
+    color: var(--gold); background: transparent; border: none; outline: none;
+    border-bottom: 1px dashed rgba(201,168,76,0.3); padding: 2px 4px;
+    width: 100%;
+  }
+  .group-display-name::placeholder { color: var(--text-faint); }
+
+  .group-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+  .group-chips .name-chip { font-size: 0.78rem; padding: 4px 10px; }
+
+  .group-card .remove-btn {
+    background: none; border: none; color: var(--text-faint); font-size: 0.7rem;
+    cursor: pointer; padding: 2px 6px; border-radius: 4px;
+    transition: all 0.15s;
+  }
+  .group-card .remove-btn:hover { color: var(--red); background: rgba(224,85,85,0.1); }
+
+  .delete-group {
+    background: none; border: none; color: var(--text-faint); cursor: pointer;
+    font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; transition: all 0.15s;
+    margin-left: auto;
+  }
+  .delete-group:hover { color: var(--red); background: rgba(224,85,85,0.1); }
+
+  /* ── Buttons ── */
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 16px; border-radius: 8px; cursor: pointer;
+    font-family: 'DM Sans', sans-serif; font-size: 0.82rem; font-weight: 500;
+    transition: all 0.15s; border: 1px solid var(--border); background: var(--bg-card);
+    color: var(--text);
+  }
+  .btn:hover { border-color: rgba(201,168,76,0.4); }
+  .btn-gold { background: rgba(201,168,76,0.12); color: var(--gold); border-color: rgba(201,168,76,0.3); }
+  .btn-gold:hover { background: rgba(201,168,76,0.2); }
+
+  .actions { display: flex; gap: 8px; margin-top: 1rem; flex-wrap: wrap; }
+
+  /* ── Output ── */
+  .output-section { margin-top: 2.5rem; }
+  .output-section h2 { font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem; }
+  .output-section .hint { font-size: 0.78rem; color: var(--text-dim); margin-bottom: 0.75rem; }
+
+  .output-box {
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem; font-family: 'DM Mono', monospace; font-size: 0.78rem;
+    color: var(--gold-light); white-space: pre-wrap; line-height: 1.6;
+    max-height: 400px; overflow-y: auto; cursor: text; user-select: all;
+  }
+
+  .copy-btn {
+    margin-top: 0.5rem;
+  }
+  .copy-btn.copied { color: var(--green); border-color: rgba(76,175,106,0.3); }
+
+  .legend { display: flex; gap: 1rem; margin-bottom: 1.5rem; font-size: 0.78rem; color: var(--text-dim); }
+  .legend-item { display: flex; align-items: center; gap: 4px; }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+</style>
+</head>
+<body>
+
+<h1>🎬 Oscar Name Mapper</h1>
+<p class="desc">
+  People use different names across years. Drag names into groups to tell the stats engine
+  they're the same person. Set a display name for each group. Then copy the output into your
+  <code>sketch.js</code> config.
+</p>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot ydot-2023"></div> 2023</div>
+  <div class="legend-item"><div class="legend-dot ydot-2024"></div> 2024</div>
+  <div class="legend-item"><div class="legend-dot ydot-2025"></div> 2025</div>
+</div>
+
+<div class="layout">
+  <div class="panel">
+    <div class="panel-title">Ungrouped Names</div>
+    <div class="ungrouped" id="ungrouped"></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Groups (same person)</div>
+    <div class="groups-area" id="groups-area"></div>
+    <div class="actions">
+      <button class="btn btn-gold" onclick="addGroup()">+ New Group</button>
+      <button class="btn" onclick="autoGroup()">Auto-guess groups</button>
+    </div>
+  </div>
+</div>
+
+<div class="output-section">
+  <h2>Config Output</h2>
+  <p class="hint">Copy this into the top of your <code>sketch.js</code>, replacing the existing <code>NAME_MAP</code>.</p>
+  <div class="output-box" id="output"></div>
+  <button class="btn copy-btn" id="copy-btn" onclick="copyOutput()">Copy to clipboard</button>
+</div>
+
+<script>
+const DATA_YEARS = ['2023', '2024', '2025'];
+
+// All unique names: { name -> [years] }
+let allNames = {};
+// Groups: [ { displayName, names: [string] } ]
+let groups = [];
+let dragName = null;
+
+// ── Load all CSVs ──
+let loaded = 0;
+DATA_YEARS.forEach(year => {
+  Papa.parse(`data/${year}.csv`, {
+    download: true, header: true, skipEmptyLines: true,
+    complete: (results) => {
+      for (const row of results.data) {
+        const name = (row['Your Name'] || '').trim();
+        if (!name) continue;
+        if (!allNames[name]) allNames[name] = [];
+        if (!allNames[name].includes(year)) allNames[name].push(year);
+      }
+      loaded++;
+      if (loaded === DATA_YEARS.length) init();
+    },
+    error: () => { loaded++; if (loaded === DATA_YEARS.length) init(); }
+  });
+});
+
+function init() {
+  renderAll();
+}
+
+function getUngroupedNames() {
+  const grouped = new Set();
+  for (const g of groups) for (const n of g.names) grouped.add(n);
+  return Object.keys(allNames).filter(n => !grouped.has(n)).sort();
+}
+
+function makeChip(name, removable = false, groupIdx = -1) {
+  const chip = document.createElement('span');
+  chip.className = 'name-chip';
+  chip.draggable = true;
+  chip.dataset.name = name;
+
+  const years = allNames[name] || [];
+  let dotsHtml = '<span class="year-dots">';
+  for (const y of DATA_YEARS) {
+    dotsHtml += `<span class="ydot ydot-${y}${years.includes(y) ? ' active' : ''}"></span>`;
+  }
+  dotsHtml += '</span>';
+
+  chip.innerHTML = dotsHtml + ' ' + escH(name);
+
+  if (removable) {
+    const btn = document.createElement('button');
+    btn.className = 'remove-btn';
+    btn.textContent = '✕';
+    btn.onclick = (e) => { e.stopPropagation(); removeFromGroup(groupIdx, name); };
+    chip.appendChild(btn);
+  }
+
+  chip.addEventListener('dragstart', (e) => {
+    dragName = name;
+    chip.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+  });
+  chip.addEventListener('dragend', () => {
+    chip.classList.remove('dragging');
+    dragName = null;
+  });
+
+  return chip;
+}
+
+function renderAll() {
+  // Ungrouped
+  const ug = document.getElementById('ungrouped');
+  ug.innerHTML = '';
+  for (const name of getUngroupedNames()) {
+    ug.appendChild(makeChip(name));
+  }
+
+  // Make ungrouped a drop target (to un-group)
+  ug.ondragover = (e) => { e.preventDefault(); };
+  ug.ondrop = (e) => {
+    e.preventDefault();
+    if (dragName) {
+      // Remove from any group
+      for (const g of groups) {
+        g.names = g.names.filter(n => n !== dragName);
+      }
+      groups = groups.filter(g => g.names.length > 0);
+      dragName = null;
+      renderAll();
+    }
+  };
+
+  // Groups
+  const ga = document.getElementById('groups-area');
+  ga.innerHTML = '';
+  groups.forEach((g, gi) => {
+    const card = document.createElement('div');
+    card.className = 'group-card';
+    card.dataset.group = gi;
+
+    // Drop zone
+    card.ondragover = (e) => { e.preventDefault(); card.classList.add('drag-over'); };
+    card.ondragleave = () => { card.classList.remove('drag-over'); };
+    card.ondrop = (e) => {
+      e.preventDefault();
+      card.classList.remove('drag-over');
+      if (dragName) {
+        // Remove from other groups first
+        for (const og of groups) og.names = og.names.filter(n => n !== dragName);
+        groups[gi].names.push(dragName);
+        // Auto-set display name if empty
+        if (!groups[gi].displayName) groups[gi].displayName = dragName;
+        dragName = null;
+        renderAll();
+      }
+    };
+
+    // Header
+    const header = document.createElement('div');
+    header.className = 'group-header';
+
+    const input = document.createElement('input');
+    input.className = 'group-display-name';
+    input.value = g.displayName;
+    input.placeholder = 'Display name…';
+    input.oninput = () => { groups[gi].displayName = input.value; updateOutput(); };
+    header.appendChild(input);
+
+    const del = document.createElement('button');
+    del.className = 'delete-group';
+    del.textContent = 'Delete group';
+    del.onclick = () => { groups.splice(gi, 1); renderAll(); };
+    header.appendChild(del);
+
+    card.appendChild(header);
+
+    const chips = document.createElement('div');
+    chips.className = 'group-chips';
+    for (const name of g.names) {
+      chips.appendChild(makeChip(name, true, gi));
+    }
+    card.appendChild(chips);
+
+    ga.appendChild(card);
+  });
+
+  updateOutput();
+}
+
+function addGroup() {
+  groups.push({ displayName: '', names: [] });
+  renderAll();
+}
+
+function removeFromGroup(gi, name) {
+  groups[gi].names = groups[gi].names.filter(n => n !== name);
+  if (groups[gi].names.length === 0) groups.splice(gi, 1);
+  renderAll();
+}
+
+function autoGroup() {
+  // Simple heuristic: lowercase, strip non-alpha, check for substring matches
+  const names = Object.keys(allNames);
+  const used = new Set();
+  const newGroups = [];
+
+  function norm(s) { return s.toLowerCase().replace(/[^a-z]/g, ''); }
+
+  // Sort by shortest normalized name first (more likely the "canonical" form)
+  const sorted = [...names].sort((a, b) => norm(a).length - norm(b).length);
+
+  for (const name of sorted) {
+    if (used.has(name)) continue;
+    const n = norm(name);
+    if (!n) continue;
+
+    const matches = names.filter(other => {
+      if (used.has(other) || other === name) return false;
+      const o = norm(other);
+      return o.includes(n) || n.includes(o);
+    });
+
+    if (matches.length > 0) {
+      const group = [name, ...matches];
+      group.forEach(m => used.add(m));
+      newGroups.push({ displayName: name, names: group });
+    }
+  }
+
+  // Merge with existing groups
+  groups = [...groups, ...newGroups];
+  renderAll();
+}
+
+function updateOutput() {
+  const output = document.getElementById('output');
+
+  // Build the NAME_MAP object
+  const lines = ['const NAME_MAP = {'];
+
+  // Only output groups with 2+ names
+  const validGroups = groups.filter(g => g.names.length >= 1 && g.displayName);
+
+  for (const g of validGroups) {
+    lines.push(`  // ${g.names.join(', ')}`);
+    for (const name of g.names) {
+      const escaped = name.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+      lines.push(`  '${escaped}': '${g.displayName.replace(/'/g, "\\'")}',`);
+    }
+  }
+
+  lines.push('};');
+  output.textContent = lines.join('\n');
+}
+
+function copyOutput() {
+  const text = document.getElementById('output').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copy-btn');
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy to clipboard'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+function escH(s) {
+  const d = document.createElement('span');
+  d.textContent = s;
+  return d.innerHTML;
+}
+</script>
+</body>
+</html>
