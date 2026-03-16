@@ -65,7 +65,32 @@ const YEARS = [
 
     sheetUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT0feB11hiykK1RborxtdPP9A03_wQH0k2TP3YQlC2bqC52xQSm826REkK4uYdvqNIM69acHhtl8cwh/pub?output=csv',
 
-    winners: {},
+    winners: {
+      'Best Picture': 'One Battle After Another',
+      'Director': 'Paul Thomas Anderson - One Battle After Another',
+      'Actor in a Leading Role': 'Michael B. Jordan - Sinners',
+      'Actress in a Leading Role': 'Jessie Buckley - Hamnet',
+      'Actor in a Supporting Role': 'Sean Penn - One Battle After Another',
+      'Actress in a Supporting Role': 'Amy Madigan - Weapons',
+      'Animated Feature Film': 'KPop Demon Hunters',
+      'Cinematography': 'Sinners',
+      'Costume Design': 'Frankenstein',
+      'Casting': 'One Battle After Another',
+      'Documentary - Feature Film': 'Mr. Nobody Against Putin',
+      'Documentary - Short Film': 'All the Empty Rooms',
+      'Film Editing': 'One Battle After Another',
+      'International Feature Film': 'Sentimental Value (Norway)',
+      'Makeup and Hairstyling': 'Frankenstein',
+      'Music (Original Score)': 'Sinners',
+      'Music (Original Song)': '"Golden" - KPop Demon Hunters',
+      'Production Design': 'Frankenstein',
+      'Short Film (Animated)': 'The Girl Who Cried Pearls',
+      'Short Film (Live Action)': ['The Singers', 'Two People Exchanging Saliva'],
+      'Sound': 'F1',
+      'Visual Effects': 'Avatar: Fire and Ash',
+      'Writing (Adapted Screenplay)': 'One Battle After Another',
+      'Writing (Original Screenplay)': 'Sinners',
+    },
 
     skipColumns: ['Timestamp', 'Your Name'],
     nameColumn: 'Your Name',
@@ -211,6 +236,15 @@ function canonicalName(name) {
   return NAME_MAP[name] || name;
 }
 
+// Check if a pick matches a winner (winner can be string or array for ties)
+function isWinnerMatch(pick, winner) {
+  if (!pick || !winner) return false;
+  if (Array.isArray(winner)) {
+    return winner.some(w => pick.toLowerCase() === w.toLowerCase());
+  }
+  return pick.toLowerCase() === winner.toLowerCase();
+}
+
 
 // ── Tab rendering ──
 
@@ -279,7 +313,7 @@ function scoreRows(rows, cfg) {
       if (w !== undefined) {
         total++;
         const pick = (row[cat] || '').trim();
-        if (pick && w && pick.toLowerCase() === w.toLowerCase()) score++;
+        if (pick && w && isWinnerMatch(pick, w)) score++;
       }
     }
 
@@ -482,7 +516,7 @@ function render(rows, cfg) {
         if (w !== undefined) {
           total++;
           const pick = (row[cat] || '').trim();
-          if (pick && w && pick.toLowerCase() === w.toLowerCase()) score++;
+          if (pick && w && isWinnerMatch(pick, w)) score++;
         }
       }
     }
@@ -544,8 +578,13 @@ function render(rows, cfg) {
     const winner = (cfg.winners || {})[cat];
 
     // If nobody picked the actual winner, add it with 0 votes
-    if (winner && !sorted.some(([ch]) => ch.toLowerCase() === winner.toLowerCase())) {
-      sorted.push([winner, 0]);
+    if (winner) {
+      const winnerList = Array.isArray(winner) ? winner : [winner];
+      for (const w of winnerList) {
+        if (!sorted.some(([ch]) => ch.toLowerCase() === w.toLowerCase())) {
+          sorted.push([w, 0]);
+        }
+      }
     }
 
     html += `<div class="cat-card" style="animation-delay:${ci * 0.025}s">`;
@@ -553,10 +592,10 @@ function render(rows, cfg) {
 
     for (const [choice, count] of sorted) {
       const pct = (count / maxCount) * 100;
-      const isWinner = winner && choice.toLowerCase() === winner.toLowerCase();
-      const barCls = isWinner ? 'cat-bar-fill winner' : 'cat-bar-fill';
-      const nameCls = isWinner ? 'cat-choice-name winner' : 'cat-choice-name';
-      const tag = isWinner ? '<span class="winner-tag">✓ WON</span>' : '';
+      const isW = winner && isWinnerMatch(choice, winner);
+      const barCls = isW ? 'cat-bar-fill winner' : 'cat-bar-fill';
+      const nameCls = isW ? 'cat-choice-name winner' : 'cat-choice-name';
+      const tag = isW ? '<span class="winner-tag">✓ WON</span>' : '';
 
       html += `
         <div class="cat-choice">
